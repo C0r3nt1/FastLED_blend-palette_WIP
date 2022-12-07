@@ -1,0 +1,97 @@
+#include <FastLED.h>
+
+#define LED_PIN    2
+#define LED_TYPE    WS2812B
+#define COLOR_ORDER GRB
+#define NUM_LEDS    30
+#define BRIGHTNESS  50
+
+CRGB leds[NUM_LEDS];
+
+
+//PALETTE
+DEFINE_GRADIENT_PALETTE( greenblue_gp ) { 
+    0,    0,  194,  255,     //light blue
+   46,    3,    0,  246,     //dark blue
+  176,   55,  222,   70,     //bright green
+  255,    0,  194,  255      //light blue
+};
+
+DEFINE_GRADIENT_PALETTE( orangepink_gp ) { 
+    0,  255,  100,    0,     //orange
+   90,  255,    0,  255,     //magenta
+  150,  255,  100,    0,     //orange
+  255,  255,  100,    0      //orange
+};
+
+DEFINE_GRADIENT_PALETTE( browngreen_gp ) { 
+    0,    6,  255,    0,     //green
+   71,    0,  255,  153,     //bluegreen
+  122,  200,  200,  200,     //gray
+  181,  110,   61,    6,     //brown
+  255,    6,  255,    0      //green
+};
+
+CRGBPalette16 myPal1 = greenblue_gp;
+CRGBPalette16 myPal2 = orangepink_gp;
+CRGBPalette16 myPal3 = browngreen_gp;
+
+uint8_t choices[3] = { myPal1, myPal2, myPal3};
+
+//BLEND
+uint8_t blendRate = 50;  // How fast to blend.  Higher is slower.  [milliseconds]
+
+CHSV colorStart1 = ColorFromPalette (myPal1, 0);  // starting color
+CHSV colorTarget1 = ColorFromPalette (myPal2, 0);  // target color
+CHSV colorCurrent1 = colorStart1;
+
+CHSV colorStart2 = ColorFromPalette (myPal1, 255);  // starting color
+CHSV colorTarget2 = ColorFromPalette (myPal2, 255);  // target color
+CHSV colorCurrent2 = colorStart2;
+
+//ARRAYS
+uint8_t mySet1[] = {0,1,2,3,4,5,6,7,8,9};  //array of 10 pixels
+uint8_t mySetLength1 = 10;  //how many elements in mySet
+uint8_t mySet2[] = {10,11,12,13,14,15,16,17,18,19};  //array of 10 pixels
+uint8_t mySetLength2 = 10;  //how many elements in mySet
+
+
+//_________________SETUP_________________
+void setup() {
+
+  delay(1000); // 1 second delay for recovery
+  FastLED.addLeds<LED_TYPE,LED_PIN,COLOR_ORDER>(leds, NUM_LEDS);
+  FastLED.setBrightness(BRIGHTNESS);
+}
+
+//_________________LOOP_________________
+void loop() {
+  EVERY_N_MILLISECONDS(blendRate){
+    static uint8_t k1;  // the amount to blend [0-255]
+   
+    if ( colorCurrent1.h == colorTarget1.h ) {  // Check if target has been reached
+      colorStart1 = colorCurrent1;
+      colorTarget1 = ColorFromPalette (choices[random(3)], 0);  // new target to transition toward
+      k1 = 0;  // reset k value
+    }
+    if ( colorCurrent2.h == colorTarget2.h ) {  // Check if target has been reached
+      colorStart2 = colorCurrent2;
+      colorTarget2 = ColorFromPalette (choices[random(3)], 255);  // new target to transition toward
+      k1 = 0;  // reset k value
+    }
+    
+    colorCurrent1 = blend(colorStart1, colorTarget1, k1, SHORTEST_HUES);
+    colorCurrent2 = blend(colorStart2, colorTarget2, k1, SHORTEST_HUES);
+    
+    for(uint8_t i=0; i<mySetLength1 ; i++) {
+    leds[mySet1[i]] = CHSV(colorCurrent1);
+    }
+    for(uint8_t i=0; i<mySetLength2 ; i++) {
+    leds[mySet2[i]] = CHSV(colorCurrent2);
+    }
+    
+    k1++;
+  }
+
+  FastLED.show(); 
+}
